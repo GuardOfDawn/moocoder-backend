@@ -5,13 +5,18 @@ import com.moekr.moocoder.logic.api.vo.GitlabUser;
 import com.moekr.moocoder.util.ApplicationProperties;
 import com.moekr.moocoder.util.ApplicationProperties.Gitlab;
 import com.moekr.moocoder.util.ToolKit;
+import org.gitlab4j.api.CommitsApi;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
+import org.gitlab4j.api.RepositoryFileApi;
 import org.gitlab4j.api.models.*;
 import org.gitlab4j.api.models.ImpersonationToken.Scope;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.UnsupportedEncodingException;
+import java.util.Base64;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -125,4 +130,21 @@ public class GitlabApiImpl implements GitlabApi {
 	public void deleteProject(int projectId) throws GitLabApiException {
 		server.getProjectApi().deleteProject(projectId);
 	}
+
+	@Override
+	public String getRepositoryFile(int projectId, String branch, String path) throws GitLabApiException, UnsupportedEncodingException {
+		RepositoryFileApi repositoryFileApi = server.getRepositoryFileApi();
+		RepositoryFile repositoryFile = repositoryFileApi.getFile(path, projectId, branch);
+		if(repositoryFile!=null){
+			return new String(Base64.getDecoder().decode(repositoryFile.getContent()), "UTF-8");
+		}
+		return null;
+	}
+
+	@Override
+	public void createCommit(int projectId, String branch, String commitMessage, String email, String username, List<CommitAction> actions) throws GitLabApiException {
+		CommitsApi commitsApi = server.getCommitsApi();
+        commitsApi.createCommit(projectId, branch, commitMessage, null, email, username,actions);
+    }
+
 }

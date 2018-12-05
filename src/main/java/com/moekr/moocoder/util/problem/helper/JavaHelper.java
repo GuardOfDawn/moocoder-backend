@@ -25,13 +25,13 @@ public class JavaHelper extends AbstractJavaHelper {
 				"RUN apt update && apt install --no-install-recommends -y default-jre default-jdk maven\n" +
 				"COPY ./code /var/ws/code\n" +
 				"WORKDIR /var/ws/code/" + uniqueName + "\n" +
-				"RUN mvn -fn clean test clean -Dmaven.repo.local=/var/ws/repository/ || :\n";
+				"RUN _JAVA_OPTIONS=-Djdk.net.URLClassPath.disableClassPathURLCheck=true mvn -fn clean test clean -Dmaven.repo.local=/var/ws/repository/ || :\n";
 	}
 
 	@Override
 	public String runScript(String uniqueName) {
 		return "pushd /var/ws/tmp/ &>/dev/null\n"
-				+ "mvn -fn clean test -Dmaven.repo.local=/var/ws/repository/\n"
+				+ "_JAVA_OPTIONS=-Djdk.net.URLClassPath.disableClassPathURLCheck=true JAVA_TOOL_OPTIONS=-Dfile.encoding=utf-8 mvn -fn clean test -Dmaven.repo.local=/var/ws/repository/\n"
 				+ "popd &>/dev/null\n"
 				+ "rm -rf test-reports &>/dev/null\n"
 				+ "mkdir test-reports &>/dev/null\n"
