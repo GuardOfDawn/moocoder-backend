@@ -12,7 +12,9 @@ import com.moekr.moocoder.logic.service.OnlineCodeService;
 import com.moekr.moocoder.logic.vo.CodeVO;
 import com.moekr.moocoder.util.ApplicationProperties;
 import com.moekr.moocoder.util.ToolKit;
+import com.moekr.moocoder.util.enums.ExamStatus;
 import com.moekr.moocoder.util.exceptions.Asserts;
+import com.moekr.moocoder.util.exceptions.EntityNotAvailableException;
 import com.moekr.moocoder.util.exceptions.ServiceException;
 import com.moekr.moocoder.web.dto.CodeDTO;
 import lombok.extern.apachecommons.CommonsLog;
@@ -26,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.UnsupportedEncodingException;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -51,6 +54,18 @@ public class OnlineCodeServiceImpl implements OnlineCodeService {
         User user = userDAO.findById(userId);
         Result result = resultDAO.findByOwnerAndExam(user, exam);
         Asserts.notNull(result, "不存在该场考试的记录");
+        if (exam.getStatus() == ExamStatus.PREPARING) {
+            throw new EntityNotAvailableException("考试正在准备中！");
+        } else if (exam.getStatus() == ExamStatus.CLOSED) {
+            throw new EntityNotAvailableException("考试已经结束！");
+        } else if(exam.getStatus() == ExamStatus.AVAILABLE){
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(exam.getStartAt())) {
+                throw new EntityNotAvailableException("考试还未开始！");
+            } else if (now.isAfter(exam.getEndAt())) {
+                throw new EntityNotAvailableException("考试已经结束！");
+            }
+        }
         Problem problem = null;
         for(Problem p:exam.getProblems()){
             if(p.getId()==questionId){
@@ -92,6 +107,18 @@ public class OnlineCodeServiceImpl implements OnlineCodeService {
         User user = userDAO.findById(userId);
         Result result = resultDAO.findByOwnerAndExam(user, exam);
         Asserts.notNull(result, "不存在该场考试的记录");
+        if (exam.getStatus() == ExamStatus.PREPARING) {
+            throw new EntityNotAvailableException("考试正在准备中！");
+        } else if (exam.getStatus() == ExamStatus.CLOSED) {
+            throw new EntityNotAvailableException("考试已经结束！");
+        } else if(exam.getStatus() == ExamStatus.AVAILABLE){
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(exam.getStartAt())) {
+                throw new EntityNotAvailableException("考试还未开始！");
+            } else if (now.isAfter(exam.getEndAt())) {
+                throw new EntityNotAvailableException("考试已经结束！");
+            }
+        }
         Problem problem = null;
         for(Problem p:exam.getProblems()){
             if(p.getId()==questionId){
