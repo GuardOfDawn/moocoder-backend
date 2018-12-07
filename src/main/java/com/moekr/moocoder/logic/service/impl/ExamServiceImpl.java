@@ -95,9 +95,11 @@ public class ExamServiceImpl implements ExamService {
 		if (joined) {
 			pageResult = examDAO.findAllJoined(userId, pageable);
 		} else if (status == null) {
-			pageResult = examDAO.findAll(pageable);
+//			pageResult = examDAO.findAll(pageable);
+			pageResult = examDAO.findAllExcludeClosed(userId, pageable);
 		} else {
-			pageResult = examDAO.findAllByActualStatus(status, pageable);
+//			pageResult = examDAO.findAllByActualStatus(status, pageable);
+			pageResult = examDAO.findAllByActualStatus(userId, status, pageable);
 		}
 		return pageResult.map(e -> convert(userId, e));
 	}

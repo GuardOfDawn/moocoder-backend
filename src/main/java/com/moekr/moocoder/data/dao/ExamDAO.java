@@ -52,11 +52,73 @@ public interface ExamDAO extends JpaRepository<Exam, Integer> {
 		return new PageImpl<>(examList, pageable, countAllJoined(userId));
 	}
 
+	/**
+	 * 不能查询到关闭的或结束的并且未参加的考试
+	 * @param userId
+	 * @param status
+	 * @param pageable
+	 * @return
+	 */
+	default Page<Exam> findAllByActualStatus(int userId, ExamStatus status, Pageable pageable){
+		switch (status) {
+			case READY:
+				return findAllReady(pageable);
+			case AVAILABLE:
+				return findAllAvailable(pageable);
+			case FINISHED:
+				return findAllJoinedAndFinished(userId, pageable);
+			case CLOSED:
+				return findAllJoinedAndStatusIs(userId, status, pageable);
+		}
+		return findAllByStatus(status, pageable);
+	}
+
+	default Page<Exam> findAllJoinedAndFinished(int userId, Pageable pageable) {
+		LocalDateTime now = LocalDateTime.now();
+		List<Exam> examList = findAllJoinedByStatusAndEndAtIsLessThan(userId, ExamStatus.AVAILABLE, now, pageable.getOffset(), pageable.getPageSize());
+		return new PageImpl<>(examList, pageable, countAllJoinedByStatusAndEndAtIsLessThan(userId, ExamStatus.AVAILABLE, now));
+	}
+
+	default Page<Exam> findAllJoinedAndStatusIs(int userId, ExamStatus status, Pageable pageable) {
+		List<Exam> examList = findAllJoinedAndStatusIs(userId, status.toString(), pageable.getOffset(), pageable.getPageSize());
+		return new PageImpl<>(examList, pageable, countAllJoinedAndStatusIs(userId, status.toString()));
+	}
+
+    /**
+     * 查询所有考试，不包括已关闭的
+     * @param userId
+     * @param pageable
+     * @return
+     */
+    default Page<Exam> findAllExcludeClosed(int userId, Pageable pageable) {
+        LocalDateTime now = LocalDateTime.now();
+        List<Exam> examList = findAllJoinedOrStatusAvailable(userId, pageable.getOffset(), pageable.getPageSize());
+        return new PageImpl<>(examList, pageable, countAllJoinedOrStatusAvailable(userId));
+    }
+
 	@Query(value = "SELECT * FROM ENTITY_EXAM AS e WHERE e.id IN (SELECT r.exam FROM ENTITY_RESULT AS r WHERE r.owner = ?1) ORDER BY e.id DESC LIMIT ?2,?3", nativeQuery = true)
 	List<Exam> findAllJoined(int userId, long offset, int limit);
 
 	@Query(value = "SELECT COUNT(*) FROM ENTITY_EXAM AS e WHERE e.id IN (SELECT r.exam FROM ENTITY_RESULT AS r WHERE r.owner = ?1)", nativeQuery = true)
 	long countAllJoined(int userId);
+
+	@Query(value = "SELECT * FROM ENTITY_EXAM AS e WHERE e.id IN (SELECT r.exam FROM ENTITY_RESULT AS r WHERE r.owner = ?1) and e.status = ?2 and e.end_at < ?3 ORDER BY e.id DESC LIMIT ?4,?5", nativeQuery = true)
+	List<Exam> findAllJoinedByStatusAndEndAtIsLessThan(int userId, ExamStatus status, LocalDateTime now, long offset, int limit);
+
+	@Query(value = "SELECT COUNT(*) FROM ENTITY_EXAM AS e WHERE e.id IN (SELECT r.exam FROM ENTITY_RESULT AS r WHERE r.owner = ?1) and e.status = ?2 and e.end_at < ?3", nativeQuery = true)
+	long countAllJoinedByStatusAndEndAtIsLessThan(int userId, ExamStatus status, LocalDateTime now);
+
+	@Query(value = "SELECT * FROM ENTITY_EXAM AS e WHERE e.id IN (SELECT r.exam FROM ENTITY_RESULT AS r WHERE r.owner = ?1) and e.status = ?2 ORDER BY e.id DESC LIMIT ?3,?4", nativeQuery = true)
+	List<Exam> findAllJoinedAndStatusIs(int userId, String status, long offset, int limit);
+
+	@Query(value = "SELECT COUNT(*) FROM ENTITY_EXAM AS e WHERE e.id IN (SELECT r.exam FROM ENTITY_RESULT AS r WHERE r.owner = ?1) and e.status = ?2", nativeQuery = true)
+	long countAllJoinedAndStatusIs(int userId, String status);
+
+    @Query(value = "SELECT * FROM ENTITY_EXAM AS e WHERE e.id IN (SELECT r.exam FROM ENTITY_RESULT AS r WHERE r.owner = ?1) or e.status = 'AVAILABLE' ORDER BY e.id DESC LIMIT ?2,?3", nativeQuery = true)
+    List<Exam> findAllJoinedOrStatusAvailable(int userId, long offset, int limit);
+
+    @Query(value = "SELECT COUNT(*) FROM ENTITY_EXAM AS e WHERE e.id IN (SELECT r.exam FROM ENTITY_RESULT AS r WHERE r.owner = ?1) or e.status = 'AVAILABLE'", nativeQuery = true)
+    long countAllJoinedOrStatusAvailable(int userId);
 
 	default Page<Exam> findAllReady(Pageable pageable) {
 		return findAllByStatusAndStartAtIsGreaterThan(ExamStatus.AVAILABLE, LocalDateTime.now(), pageable);
